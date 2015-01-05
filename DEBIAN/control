@@ -1,0 +1,12 @@
+Package: cstbox-ext-wsfeed
+Version: 1.0.0
+Section: base
+Priority: optional
+Architecture: all
+Depends: cstbox-core, cstbox-ext-webservices
+Maintainer: Eric Pascual <eric.pascual@cstb.fr>
+Description: CSTBox variable feed Web services
+ This package provides a Web services based mechanism for feeding
+ variable values from external sources.
+
+
