@@ -1,1 +1,9 @@
 cstbox-ext-wsfeed_1.0.0_all
+*.aux
+*.hst
+*.log
+*.out
+*.pdf
+*.synctex.gz
+*.toc
+*.ver
