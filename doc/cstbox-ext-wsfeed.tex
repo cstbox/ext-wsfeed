@@ -1,0 +1,400 @@
+% !TeX encoding = UTF-8
+% !TeX spellcheck = en-GB
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{xspace}
+\usepackage{float}
+\usepackage{xcolor}
+\usepackage{url}
+\usepackage[english]{babel}
+\usepackage{listings}
+\usepackage{hyperref}
+\hypersetup{
+	hidelinks,
+	colorlinks=true,
+	linkcolor=darkgray
+}
+\usepackage{lmodern}
+\usepackage[left=3cm,right=3cm,top=3cm,bottom=3cm]{geometry}
+\usepackage{vhistory}
+\usepackage[bottom]{footmisc}
+\usepackage{fancyhdr}
+\usepackage{booktabs}
+\usepackage{framed}
+%\usepackage{lipsum}
+
+%\usepackage{tikz}
+%\usetikzlibrary{shapes,shadows,calc}
+
+\newcommand{\cbx}{CSTBox\xspace}
+\newcommand{\wsf}{WSFeed\xspace}
+\newcommand{\thetitle}{\cbx \wsf module documentation}
+
+\author{Eric PASCUAL}
+\title{\thetitle}
+\date{Jan. 19, 2015}
+\newcommand\rev{0.2}
+
+\newcommand{\apireq}[2]{\vspace{1em}\textbf{Request : }\texttt{#1~#2}}
+
+\newcommand{\reqenvwidth}{\textwidth}
+
+\newenvironment{reqflds} {%
+	\vspace{1em}\textbf{Request fields : }\hfill\\ %
+	\tabularx{\reqenvwidth}{llX} %
+	\textbf{Name} & \textbf{Type} & \textbf{Description}\\ %
+	\midrule %
+}{ %
+	\endtabularx %
+}
+
+\newcommand{\reqfld}[3]{\texttt{#1} & #2 & #3 \\}
+
+\newenvironment{reqargs} { %
+	\vspace{1em}\textbf{Request arguments : }\hfill\\ %
+	\tabularx{\reqenvwidth}{llX} %
+	\textbf{Name} & \textbf{Type} & \textbf{Description}\\ %
+	\midrule %
+}{ %
+	\endtabularx %
+}
+
+\newcommand{\reqarg}[3]{\texttt{#1} & #2 & #3 \\}
+
+\newcommand{\reqbody}[1]{\vspace{1em}\textbf{Request body : }\texttt{#1}}
+
+\newenvironment{responses} { %
+	\vspace{1em}\textbf{Responses : }\hfill\\ %
+	\tabularx{\reqenvwidth}{lp{0.5\textwidth}X} %
+	\textbf{Status} & \textbf{Reply body} & \textbf{Description}\\ %
+	\midrule %
+}{ %
+	\endtabularx %
+}
+
+\newcommand{\response}[3]{#1 & \texttt{#2} & #3 \\}
+
+\setlength\extrarowheight{0.5em}
+
+\renewcommand{\headrulewidth}{0.5pt}
+\pagestyle{fancy}
+\fancyhf{}
+\lhead{\cbx}
+\rhead{\wsf module documentation rev.\rev}
+\cfoot{\thepage}
+
+\colorlet{punct}{red!60!black}
+\definecolor{background}{HTML}{EEEEEE}
+\definecolor{delim}{RGB}{20,105,176}
+\colorlet{numb}{magenta!60!black}
+
+\lstdefinelanguage{json}{
+    basicstyle=\normalfont\ttfamily,
+    numbers=left,
+    numberstyle=\scriptsize,
+    stepnumber=1,
+    numbersep=8pt,
+    showstringspaces=false,
+    breaklines=true,
+    frame=lines,
+    backgroundcolor=\color{background},
+    literate=
+     *{0}{{{\color{numb}0}}}{1}
+      {1}{{{\color{numb}1}}}{1}
+      {2}{{{\color{numb}2}}}{1}
+      {3}{{{\color{numb}3}}}{1}
+      {4}{{{\color{numb}4}}}{1}
+      {5}{{{\color{numb}5}}}{1}
+      {6}{{{\color{numb}6}}}{1}
+      {7}{{{\color{numb}7}}}{1}
+      {8}{{{\color{numb}8}}}{1}
+      {9}{{{\color{numb}9}}}{1}
+      {:}{{{\color{punct}{:}}}}{1}
+      {,}{{{\color{punct}{,}}}}{1}
+      {\{}{{{\color{delim}{\{}}}}{1}
+      {\}}{{{\color{delim}{\}}}}}{1}
+      {[}{{{\color{delim}{[}}}}{1}
+      {]}{{{\color{delim}{]}}}}{1},
+}
+
+\begin{document}
+
+\maketitle
+
+\begin{abstract}
+This document describes the \wsf extension module for the \cbx.
+\end{abstract}
+
+\begin{versionhistory}
+\vhEntry{0.1}{2015-01-14}{EP}{first draft}
+\vhEntry{0.2}{2015-01-19}{EP}{variables definitions management requests added}
+\vhEntry{0.3}{2015-02-04}{EP}{typos and minor corrections}
+\end{versionhistory}
+
+\setcounter{table}{0}	% needed to reset counter since version history creates a table
+
+\clearpage
+\tableofcontents
+
+\clearpage
+\setlength{\parskip}{0.5em}
+\setlength{\parindent}{0pt}
+
+\section{Objectives}
+
+The \wsf extension module adds capabilities to the \cbx framework for feeding events 
+coming from the external world. These events are injected in event buses as if they were 
+produced by embedded extensions modules.
+
+\section{Philosophy}
+
+In order to be as opened as possible, this extension is based on the following principles:
+\begin{itemize}
+\item the events entry point is provided as a Web Service, 
+hence the name of the extension (\wsf stands for "Web Services Feed").
+\item time stamping is by default managed by the extension, in order to :
+\begin{itemize}
+\item simplify at the most what external actors have to provide
+\item ensure a coherent time stamping of events in the box realm, since the external feed 
+channel can be used in conjunction with other internal ones, such as sensor drivers
+\end{itemize}
+\end{itemize}
+
+\section{Common considerations} 
+
+\subsection{HTTP methods}
+
+All the services are invoked using HTTP GET, POST, PUT and DELETE methods. 
+
+\subsection{HTTP responses}
+
+\subsubsection{Normal responses}
+
+HTTP response body is used to return the requested data or to provide complementary 
+information in case of request processing error. The body content is formatted as a directly 
+parsable JSON\footnote{\url{http://www.json.org/}} string. The response header includes the 
+appropriate "\texttt{Content-Type: application/json}" field to inform the client.
+
+\subsubsection{Handled error responses}
+
+Handled processing error, such as bad requests, not found resources,\dots are reported using 
+the appropriate 4xx status codes. The response body will contain at least the following 
+field :
+
+\begin{tabularx}{\textwidth}{lX}
+\texttt{message} & short error message\\
+\end{tabularx}
+
+In case of syntactically invalid parameters, refering to not existing resources or 
+any similar situation, additional information are provided in the \texttt{additInfos} field. 
+Its content will depend on the nature of the error. It can be a simple string or a 
+dictionary when a structured feedback is useful.
+
+\subsubsection{Unexpected error responses}
+
+Unexpected processing errors on server side are reported with status code 500, the response 
+body containing the following fields :
+
+\begin{tabularx}{\textwidth}{lX}
+\texttt{errtype} & the name of the error or exception, as defined by the server process\\
+\texttt{message} & short error message \\
+\texttt{additInfos} & optional additional information\\
+\end{tabularx}
+
+\subsection{Authentication}
+
+To be defined
+
+\section{Configuration}
+
+\subsection{Overview}
+The configuration of this module consists mainly in declaring the variables which can be fed 
+by its services, using the file \texttt{/etc/cstbox/wsfeed.cfg}. 
+
+This file contains a dictionary encoded in JSON format. Keys defined in the current version 
+are :
+
+\begin{tabularx}{\textwidth}{lX}
+\textbf{Name} & \textbf{Content} \\
+\midrule
+\texttt{variables} & the definitions of the variables known by the module
+\end{tabularx}
+
+Additional top level entries may be added in the future for supporting new needs.
+
+\subsection{Configuration keys detail}
+
+\subsubsection{variables}
+\label{sec:cfg-variables}
+
+The associated value is a sub-dictionary containing the definitions of the variables, the 
+keys being the names of the variables. The definition of a variable is itself a 
+sub-dictionary, using the following keys :
+\begin{description}
+\item [\texttt{var\_type}]\hfill\\
+The semantic type of the variable, in terms of application domain, such as 
+\texttt{temperature}, \texttt{current},\dots Valid types are listed hereafter.
+\item [\texttt{unit}]\hfill\\
+The unit used to express the value, when relevant.
+\end{description}
+
+Semantic types currently defined are :
+ 
+\begin{hyphenrules}{nohyphenation}\begin{sloppypar}
+\begin{tabularx}{\textwidth}{lX}
+\textbf{physical measurements} &
+temperature,
+volume,
+voltage,
+current,
+frequency,
+power,
+energy,
+phase\_shift,
+cos\_phi,
+power.react,
+energy.react,
+flow,
+pressure,
+static\_pressure,
+dynamic\_pressure \\
+\textbf{binary states} &
+opened,
+occupancy,
+presence,
+flow\_detection,
+flood\_detection \\
+\textbf{stateless events} & 
+detection,
+notification \
+\end{tabularx}
+\end{sloppypar}\end{hyphenrules}
+
+\subsection{Example}
+
+An exemple of configuration file is provided in figure \ref{fig:config-example}.
+
+\begin{figure}[H]
+\begin{center}
+\begin{lstlisting}[language=json]
+{
+    "variables": {
+        "temp_room": {
+            "var_type": "temperature",
+            "unit": "degC"
+        },
+        "phase_1_current": {
+            "var_type": "current",
+            "unit": "A"
+        }
+    }
+}
+\end{lstlisting}
+\end{center}
+\caption{Example of configuration file}
+\label{fig:config-example}
+\end{figure}
+
+
+\section{Web services API}
+
+\subsection{Feed external event}
+
+This request injects one or more events, corresponding to the variable values provided as 
+arguments. 
+
+By default, time stamping of the resulting events is generated at broadcast time, using the 
+same instant for all of them. If a specific time stamp is needed for a variable, it can be 
+provided as a complementary field of its data, in the format described hereafter.
+
+\apireq{POST}{/api/wsf/pushval}
+
+\begin{reqargs}
+\reqarg{nvt}{variable data}{Name, Value and optional Time stamp}
+\end{reqargs}
+
+\textbf{Note:} \texttt{nvt} stands for : \textbf{n}ame, \textbf{v}alue, \textbf{t}ime.
+
+Multiple occurrences of the \texttt{nvt} argument can be used in the request if several 
+values are to be fed in at the same time.
+
+The \texttt{nvt} value is formatted as a multiple fields string, separated by a colon (':'). 
+These fields are in sequence :
+\begin{itemize}
+\item the name of the variable 
+\item the value of the variable, in standard ISO representation
+\item optionally, the time stamp, as a decimal number of seconds since Epoch or as a 
+standard ISO 8601 format, including the time zone\footnote{colons which can appear in the 
+ISO time stamp do not conflict with fields separators, since the parser takes the rest of 
+the value past the second colon as a whole}
+\end{itemize}
+
+\begin{responses}
+\response{200}{\textit{empty}}{feed processed successfully}
+
+\response{400}{\{\newline
+"message": "invalid nvt value",\newline 
+"additInfos": \dots\newline
+\}}{the provided tuple is invalid (most probable cause : wrong fields count). The 
+\texttt{additInfos} field contains the offending argument value}
+
+\response{400}{\{\newline
+"message": "invalid value",\newline 
+"additInfos": \{\newline
+"name": \dots,\newline
+"value": \dots\newline
+\}\newline
+\}}{the provided value is invalid. The \texttt{additInfos} field contains a sub-dictionary 
+providing the name of the variable and the offending value}
+
+\response{400}{\{\newline
+"message": "invalid timestamp",\newline 
+"additInfos": \{\newline
+"name": \dots,\newline
+"timestamp": \dots\newline
+\}\newline
+\}}{the provided time stamp is invalid. The \texttt{additInfos} field contains a 
+sub-dictionary providing the name of the variable and the offending value}
+
+\response{404}{\{\newline
+"message": "undefined variable",\newline 
+"additInfos": \dots\newline
+\}}
+{the variable is not defined. The \texttt{additInfos} field contains the offending variable 
+name}
+\end{responses}
+
+\subsection{Variable definitions management services}
+
+\subsubsection{Variables definitions retrieval}
+\label{sec:vardefs-get}
+
+\apireq{GET}{/api/wsf/vardefs}
+
+\begin{responses}
+\response{200}{the variables definitions}{formatted as detailed in 
+\ref{sec:cfg-variables}}
+\end{responses}
+
+\subsubsection{Variables definitions update}
+\label{sec:vardefs-post}
+
+\apireq{POST}{/api/wsf/vardefs}
+
+\begin{responses}
+\response{200}{\textit{empty}}{}
+\response{400}{%
+\{\newline
+"message": "invalid JSON data",\newline 
+\}}{provided JSON data are not valid}
+\response{400}{%
+\{\newline
+"message": "invalid variable definition",\newline 
+"additInfos": \dots\newline
+\}}{provided variable definition is not valid. 
+The \texttt{additInfos} field contains the name of the offending variable}
+\end{responses}
+
+\end{document}
