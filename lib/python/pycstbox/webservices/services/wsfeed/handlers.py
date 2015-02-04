@@ -6,10 +6,12 @@ __author__ = 'Eric Pascual - CSTB (eric.pascual@cstb.fr)'
 import time
 from collections import namedtuple
 import json
+import dateutil
 
 from pycstbox.webservices.wsapp import WSHandler
 import pycstbox.evtmgr
 from pycstbox.events import make_data
+from pycstbox import sysutils
 
 
 class BaseHandler(WSHandler):
@@ -46,13 +48,17 @@ class PushValues(BaseHandler):
     """ Posts one or several variable values.
 
     The corresponding sensor events are built and broadcast on the sensor event bus.
-
-    Request arguments:
-        var
-            (mandatory) one or more (name, value) pairs, containing the name and the value
-            of each pushed variable. Items are joined by a colon char (':')
     """
     def do_post(self):
+        """ Post events according the provided variable values.
+
+        Request arguments:
+            - nvt
+                (mandatory) one or more (name, value[, timestamp]) tuples, containing the name and the value
+                of each pushed variable. A specific time stamp can be provided as the optional third item.
+                Tuple items are joined by a colon char (':'). Time stamp is provided either as the decimal
+                seconds count since Epoch or as a valid ISO8601 string.
+        """
         if not self._vars:
             msg = 'no variable definition available'
             self._logger.error(msg)
@@ -61,39 +67,118 @@ class PushValues(BaseHandler):
 
         var_list = self.get_arguments('var')
 
-        # use the same timestamp for all posted events since they are submitted at the same time
-        timestamp = int(time.time() * 1000)
+        # default time stamp is the same for all posted events since they are submitted at the same time
+        dflt_timestamp = int(time.time() * 1000)
 
         events = []
 
-        for nv in var_list:
+        for nvt in var_list:
             try:
-                name, value = nv.split(':')
+                name, arg_value, arg_timestamp = (nvt.split(':', 2) + (None,))[:3]
             except ValueError:
-                self.error_reply('invalid name:value pair (%s)' % nv)
+                self.error_reply('invalid nvt value', addit_infos=nvt, status_code=400)
                 return
+
             else:
+                # try to interpret the value field
                 try:
-                    value = int(value)
+                    value = int(arg_value)
                 except ValueError:
                     try:
-                        value = float(value)
+                        value = float(arg_value)
                     except ValueError:
-                        v = value.lower()
+                        v = arg_value.lower()
                         if v in ('true', 't', 'yes', 'y', '1'):
                             value = True
                         elif v in ('false', 'f', 'no', 'n', '0'):
                             value = False
                         else:
-                            raise ValueError('invalid value (%s) for variable (%s)' % (value, name))
+                            self.error_reply('invalid value',
+                                             addit_infos={'name': name, 'value': arg_value},
+                                             status_code=400)
+                            return
+
+                # process the time stamp if provided
+                if arg_timestamp:
+                    # is it a second count ?
+                    try:
+                        timestamp = int(float(arg_timestamp) * 1000)
+                    except ValueError:
+                        # maybe an ISO time stamp ?
+                        try:
+                            dt = dateutil.parser.parse(arg_timestamp)
+                            timestamp = sysutils.to_milliseconds(dt)
+                        except:
+                            self.error_reply('invalid time stamp',
+                                             addit_infos={'name': name, 'timestamp': arg_timestamp},
+                                             status_code=400)
+                            return
+                else:
+                    timestamp = dflt_timestamp
+
                 try:
                     var_def = self._vars[name]
                     events.append((timestamp, var_def.var_type, name, json.dumps(make_data(value, var_def.unit))))
                 except KeyError:
-                    raise ValueError('undefined variable (%s)' % name)
+                    self.error_reply('undefined variable', addit_infos=name, status_code=404)
+                    return
 
         for timestamp, var_type, name, data in events:
             self._evtmgr.emitFullEvent(timestamp, var_type, name, data)
 
 
-VariableDefinition = namedtuple('VariableDefinition', 'var_type unit')
+class VarDefAccess(BaseHandler):
+    def do_get(self):
+        """ Returns the current variable definitions as a JSON document
+        """
+        result = {v_name: v_def.as_dict() for v_name, v_def in self._vars.iteritems()}
+        self.write(result)
+
+    def do_post(self):
+        """ Updates the definitions of variables.
+
+        Data are provided in JSON format as the request body
+        """
+        try:
+            defs = json.loads(self.request.body)
+
+        except ValueError:
+            self.error_reply('invalid JSON data', status_code=400)
+            return
+
+        else:
+            cfg = json.load(file(_config_path, 'rt'))
+            cfg['variables'] = defs
+            json.dump(cfg, file(_config_path, 'wt'), indent=4)
+            cfg, var_defs = load_configuration(_config_path)
+
+            # reload definitions
+            from ..wsfeed import update_handlers_initparms
+            update_handlers_initparms(cfg, var_defs)
+
+
+class VariableDefinition(namedtuple('VariableDefinition', 'var_type unit')):
+    __slots__ = ()
+
+    def as_dict(self):
+        d = {k: self.__dict__[k] for k in ('var_type', 'unit')}
+        if not self.unit:
+            del d['unit']
+        return d
+
+
+_config_path = None
+
+
+def load_configuration(path):
+    global _config_path
+    if not _config_path:
+        _config_path = path
+
+    cfg = json.load(file(_config_path, 'rt'))
+    var_defs = {}
+    for name, definition in cfg['variables'].iteritems():
+        var_defs[name] = VariableDefinition(definition['var_type'], definition.get('unit', None))
+    del cfg['variables']
+
+    return cfg, var_defs

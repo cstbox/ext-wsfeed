@@ -24,24 +24,17 @@ def _init_(logger=None, settings=None):
     _handlers_initparms['logger'] = logger if logger else log.getLogger('svc.wsfeed')
 
     # same for services configuration
-    import json
-    try:
-        cfg_path = settings.get('config_path', '/etc/cstbox/wsfeed.cfg')
-        cfg = json.load(file(cfg_path, 'rt'))
-        var_defs = {}
-        for name, definition in cfg['variables'].iteritems():
-            var_defs[name] = VariableDefinition(definition['var_type'], definition.get('unit', None))
+    cfg, var_defs = load_configuration(path=settings.get('config_path', '/etc/cstbox/wsfeed.cfg'))
+    update_handlers_initparms(cfg, var_defs)
 
-        _handlers_initparms['variables'] = var_defs
-        del cfg['variables']
-        _handlers_initparms.update(cfg)
 
-    finally:
-        del json
-
+def update_handlers_initparms(cfg, var_defs):
+    _handlers_initparms['variables'] = var_defs
+    _handlers_initparms.update(cfg)
 
 _handlers_initparms = {}
 
 handlers = [
     (r"/pushval", PushValues, _handlers_initparms),
+    (r"/vardefs", VarDefAccess, _handlers_initparms),
 ]
