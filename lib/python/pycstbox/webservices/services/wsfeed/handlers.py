@@ -65,14 +65,14 @@ class PushValues(BaseHandler):
             self.error_reply(msg)
             return
 
-        var_list = self.get_arguments('var')
+        nvt_list = self.get_arguments('nvt')
 
         # default time stamp is the same for all posted events since they are submitted at the same time
         dflt_timestamp = int(time.time() * 1000)
 
         events = []
 
-        for nvt in var_list:
+        for nvt in nvt_list:
             try:
                 name, arg_value, arg_timestamp = (nvt.split(':', 2) + (None,))[:3]
             except ValueError:
@@ -149,6 +149,7 @@ class VarDefAccess(BaseHandler):
         else:
             cfg = json.load(file(_config_path, 'rt'))
             cfg['variables'] = defs
+            # TODO definitions checking
             json.dump(cfg, file(_config_path, 'wt'), indent=4)
             cfg, var_defs = load_configuration(_config_path)
 
