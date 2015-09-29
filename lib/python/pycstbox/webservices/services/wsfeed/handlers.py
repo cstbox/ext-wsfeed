@@ -74,12 +74,18 @@ class PushValues(BaseHandler):
 
         for nvt in nvt_list:
             try:
-                name, arg_value, arg_timestamp = (nvt.split(':', 2) + (None,))[:3]
+                nvt_parts = nvt.split(':', 2)
             except ValueError:
                 self.error_reply('invalid nvt value', addit_infos=nvt, status_code=400)
                 return
 
             else:
+                name, arg_value = nvt_parts[:2]
+                try:
+                    arg_timestamp = nvt_parts[2]
+                except IndexError:
+                    arg_timestamp = None
+
                 # try to interpret the value field
                 try:
                     value = int(arg_value)
