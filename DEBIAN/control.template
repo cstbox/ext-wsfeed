@@ -1,5 +1,5 @@
 Package: cstbox-ext-wsfeed
-Version: 1.0.1
+Version: %(version)s
 Section: base
 Priority: optional
 Architecture: all
