@@ -1,11 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-__author__ = 'Eric Pascual - CSTB (eric.pascual@cstb.fr)'
-
 import unittest
 import requests
 import json
+import time
+
+__author__ = 'Eric Pascual - CSTB (eric.pascual@cstb.fr)'
 
 
 VAR_DEFS = {
@@ -18,7 +19,8 @@ VAR_DEFS = {
     },
     "temp": {
         "var_type": "temperature",
-        "unit": "degC"
+        "unit": "degC",
+        "threshold": 1
     }
 }
 
@@ -29,11 +31,15 @@ class VarDefsTestCase(unittest.TestCase):
         self.assertTrue(response.ok)
         return json.loads(response.content)
 
-    def test_get_defs(self):
+    def test_01(self):
+        response = requests.post("http://localhost:8888/api/wsfeed/vardefs", data=json.dumps(VAR_DEFS))
+        self.assertTrue(response.ok)
+
+    def test_02(self):
         vardefs = self._get_vardefs()
         self.assertNotEqual(len(vardefs.keys()), 0)
 
-    def test_set_defs(self):
+    def test_03(self):
         new_defs = {
             'foo': {
                 "var_type": "voltage",
@@ -48,10 +54,10 @@ class VarDefsTestCase(unittest.TestCase):
         self.assertTrue('foo' in vardefs)
 
         # back to default values
-        response = requests.post("http://localhost:8888/api/wsfeed/vardefs", data=json.dumps(VAR_DEFS))
-        self.assertTrue(response.ok)
-        vardefs = self._get_vardefs()
-        self.assertFalse('foo' in vardefs)
+        # response = requests.post("http://localhost:8888/api/wsfeed/vardefs", data=json.dumps(VAR_DEFS))
+        # self.assertTrue(response.ok)
+        # vardefs = self._get_vardefs()
+        # self.assertFalse('foo' in vardefs)
 
 
 if __name__ == '__main__':
