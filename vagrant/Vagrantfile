@@ -1,0 +1,47 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# Vagrantfile for Tydom Vagrant VM
+
+# Vagrantfile API/syntax version. Don't touch unless you know what you're doing!
+VAGRANTFILE_API_VERSION = "2"
+
+Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
+  config.vm.box = "ubuntu/trusty32"
+
+  config.vm.hostname = "cbx-vagrant"
+  config.vm.network "forwarded_port", guest: 8080, host: 8080
+  config.vm.network "forwarded_port", guest: 8888, host: 8888
+  config.vm.network "forwarded_port", guest: 25, host: 25
+
+  #config.vm.synced_folder ENV["CBX_PLAYGROUND"] + "/var/db/cstbox", "/var/db/cstbox"
+
+  config.vm.post_up_message = "Vagrant CSTBox up and running"
+
+  # Enable provisioning with a shell script. Additional provisioners such as
+  # Puppet, Chef, Ansible, Salt, and Docker are also available. Please see the
+  # documentation for more information about their specific syntax and use.
+  config.vm.provision "shell", inline: <<-SHELL
+    apt-get update
+    apt-get install -y most tree vim \
+        avahi-daemon avahi-utils \
+        python-dbus python-gobject python-gobject-2 dbus-x11 python-dateutil
+
+    for f in /vagrant/cstbox-packages/cstbox-deps*.deb ; do
+        dpkg -i $f
+    done
+
+    for f in /vagrant/cstbox-packages/cstbox-core*.deb ; do
+        dpkg -i $f
+    done
+
+    for f in /vagrant/cstbox-packages/cstbox-ext-*.deb ; do
+        dpkg -i $f
+    done
+
+    # override real configuration files by test ones
+    #cp -a /vagrant/test-fixtures/etc/cstbox/* /etc/cstbox/
+
+    service cstbox start
+  SHELL
+end
