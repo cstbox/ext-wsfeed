@@ -5,5 +5,7 @@
 if [ -e /var/run/cstbox/cstbox-dbus.pid ] ; then
     echo "Restarting Web services API server"
     service cstbox-webservices restart
+    echo "Restarting Web admin app"
+    service cstbox-webadmin restart
 fi
 
