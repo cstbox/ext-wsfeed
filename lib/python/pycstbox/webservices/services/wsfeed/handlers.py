@@ -1,17 +1,19 @@
-#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-__author__ = 'Eric Pascual - CSTB (eric.pascual@cstb.fr)'
-
-import time
-from collections import namedtuple
+import datetime
 import json
+import time
+
 import dateutil
 
-from pycstbox.webservices.wsapp import WSHandler
 import pycstbox.evtmgr
-from pycstbox.events import make_data
 from pycstbox import sysutils
+from pycstbox.events import make_data
+from pycstbox.webservices.wsapp import WSHandler
+
+from pycstbox import wsfeed
+
+__author__ = 'Eric Pascual - CSTB (eric.pascual@cstb.fr)'
 
 
 class BaseHandler(WSHandler):
@@ -26,19 +28,28 @@ class BaseHandler(WSHandler):
     - variables:
         A sub-dictionary providing the definition of managed variables. Each definition is a
         VariableDefinition namedtuple. The 'variables' sub-dictionary is keyed by the variable names
-    - ...:
-        other configuration keys as stored in the configuration file
+    - config:
+        General configuration parameters
     """
     _config = None
     _debug = False
     _evtmgr = None
     _vars = None
 
-    def initialize(self, logger=None, variables=None, **kwargs):
+    def initialize(self, logger=None, config=None, variables=None, **kwargs):
         super(BaseHandler, self).initialize(logger, **kwargs)
 
-        self._vars = variables
-        self._evtmgr = pycstbox.evtmgr.get_object(pycstbox.evtmgr.SENSOR_EVENT_CHANNEL)
+        # update class level dictionaries
+        if not BaseHandler._vars:
+            BaseHandler._vars = variables
+        if not BaseHandler._config:
+            BaseHandler._config = config
+
+        self._evtmgr = self.get_event_manager()
+
+    @staticmethod
+    def get_event_manager():
+        return pycstbox.evtmgr.get_object(pycstbox.evtmgr.SENSOR_EVENT_CHANNEL)
 
     def prepare(self):
         self._debug = bool(self.get_argument('debug', 0))
@@ -123,14 +134,53 @@ class PushValues(BaseHandler):
                     timestamp = dflt_timestamp
 
                 try:
-                    var_def = self._vars[name]
-                    events.append((timestamp, var_def.var_type, name, json.dumps(make_data(value, var_def.unit))))
+                    var_meta = self._vars[name]
+
+                    # check if we need to emit an event, depending on the variable nature, threshold and TTL
+                    last_updated = var_meta.last_updated
+                    if last_updated:
+                        if self._debug:
+                            self._logger.debug('last_updated=%s', datetime.datetime.fromtimestamp(last_updated / 1000.))
+
+                        last_value = var_meta.last_value
+                        if isinstance(value, bool):
+                            emit = value != last_value
+                        else:
+                            elapsed = timestamp - last_updated
+                            emit = \
+                                abs(value - last_value) >= var_meta.threshold \
+                                or elapsed >= var_meta.ttl * 1000
+                        if self._debug:
+                            self._logger.debug('last_value=%s value=%s elapsed=%d ttl=%d => emit=%s',
+                                               last_value, value, elapsed, var_meta.ttl, emit
+                                               )
+
+                    else:
+                        # never seen it before => emit
+                        if self._debug:
+                            self._logger.debug('first time seen: %s => emit', name)
+                        emit = True
+
+                    if emit:
+                        events.append((timestamp, var_meta.var_type, name, json.dumps(make_data(value, var_meta.unit))))
+
+                        var_meta.last_updated = timestamp
+                        var_meta.last_value = value
+
+                        # self._logger.info("_vars")
+                        # for k, v in self._vars.iteritems():
+                        #     self._logger.info("- %s=%s", k, v)
+
                 except KeyError:
                     self.error_reply('undefined variable', addit_infos=name, status_code=404)
                     return
 
         for timestamp, var_type, name, data in events:
             self._evtmgr.emitFullEvent(timestamp, var_type, name, data)
+
+        self.write({
+            'event_count': len(events)
+        })
 
 
 class VarDefAccess(BaseHandler):
@@ -145,47 +195,30 @@ class VarDefAccess(BaseHandler):
 
         Data are provided in JSON format as the request body
         """
+        defs_dict = json.loads(self.request.body)
         try:
-            defs = json.loads(self.request.body)
+            var_defs = {n: wsfeed.VariableDefinition(**d) for n, d in defs_dict.iteritems()}
 
         except ValueError:
             self.error_reply('invalid JSON data', status_code=400)
             return
 
         else:
-            cfg = json.load(file(_config_path, 'rt'))
-            cfg['variables'] = defs
+            # load the current configuration
+            cfg = wsfeed.Configuration()
+            cfg.load()
+
+            # replace the variables dictionary by the new definitions
+            cfg.variable_definitions.clear()
+            cfg.variable_definitions.update(var_defs)
             # TODO definitions checking
-            json.dump(cfg, file(_config_path, 'wt'), indent=4)
-            cfg, var_defs = load_configuration(_config_path)
 
-            # reload definitions
+            # save the updated configuration
+            cfg.save()
+
+            # reload the definitions
+            gen_parms, var_defs = cfg.load()
             from ..wsfeed import update_handlers_initparms
-            update_handlers_initparms(cfg, var_defs)
+            update_handlers_initparms(gen_parms, var_defs)
 
 
-class VariableDefinition(namedtuple('VariableDefinition', 'var_type unit')):
-    __slots__ = ()
-
-    def as_dict(self):
-        d = {k: self.__dict__[k] for k in ('var_type', 'unit')}
-        if not self.unit:
-            del d['unit']
-        return d
-
-
-_config_path = None
-
-
-def load_configuration(path):
-    global _config_path
-    if not _config_path:
-        _config_path = path
-
-    cfg = json.load(file(_config_path, 'rt'))
-    var_defs = {}
-    for name, definition in cfg['variables'].iteritems():
-        var_defs[name] = VariableDefinition(definition['var_type'], definition.get('unit', None))
-    del cfg['variables']
-
-    return cfg, var_defs
