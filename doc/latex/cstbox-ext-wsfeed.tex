@@ -34,8 +34,8 @@
 
 \author{Eric PASCUAL}
 \title{\thetitle}
-\date{Jan. 19, 2015}
-\newcommand\rev{0.2}
+\date{Sep. 29, 2015}
+\newcommand\rev{0.4}
 
 \newcommand{\apireq}[2]{\vspace{1em}\textbf{Request : }\texttt{#1~#2}}
 
@@ -131,6 +131,7 @@ This document describes the \wsf extension module for the \cbx.
 \vhEntry{0.1}{2015-01-14}{EP}{first draft}
 \vhEntry{0.2}{2015-01-19}{EP}{variables definitions management requests added}
 \vhEntry{0.3}{2015-02-04}{EP}{typos and minor corrections}
+\vhEntry{0.4}{2015-09-29}{EP}{fix wrong service name in URLs}
 \end{versionhistory}
 
 \setcounter{table}{0}	% needed to reset counter since version history creates a table
@@ -309,7 +310,7 @@ By default, time stamping of the resulting events is generated at broadcast time
 same instant for all of them. If a specific time stamp is needed for a variable, it can be 
 provided as a complementary field of its data, in the format described hereafter.
 
-\apireq{POST}{/api/wsf/pushval}
+\apireq{POST}{/api/wsfeed/pushval}
 
 \begin{reqargs}
 \reqarg{nvt}{variable data}{Name, Value and optional Time stamp}
@@ -371,7 +372,7 @@ name}
 \subsubsection{Variables definitions retrieval}
 \label{sec:vardefs-get}
 
-\apireq{GET}{/api/wsf/vardefs}
+\apireq{GET}{/api/wsfeed/vardefs}
 
 \begin{responses}
 \response{200}{the variables definitions}{formatted as detailed in 
@@ -381,7 +382,7 @@ name}
 \subsubsection{Variables definitions update}
 \label{sec:vardefs-post}
 
-\apireq{POST}{/api/wsf/vardefs}
+\apireq{POST}{/api/wsfeed/vardefs}
 
 \begin{responses}
 \response{200}{\textit{empty}}{}
