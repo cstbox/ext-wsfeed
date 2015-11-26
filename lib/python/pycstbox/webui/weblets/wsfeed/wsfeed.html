@@ -1,0 +1,92 @@
+{% extends "webui-base.html" %}
+
+{% block local_css %}
+<link href="{{url_base}}/res/wsfeed.css" rel="stylesheet" type="text/css" />
+{% end %}
+
+{% block local_scripts %}
+<script src="{{url_base}}/res/wsfeed.js" type="text/javascript"></script>
+{% end %}
+
+{% block weblet_title %}{{_('WSFeed settings')}}{% end %}
+
+{% block content %}
+<div id="var-list-panel" class="ui-transp-bkgnd ui-widget-content ui-corner-all">
+    <div id="var-list-header">
+        <div class="panel-header">
+            Variables
+        </div>
+        <div>
+            <input id="inp-var_name" name="var_name"/><button id="btn-add">{{_('Add')}}</button>
+        </div>
+    </div>
+    <div id="var-list"></div>
+</div>
+
+<div id="var-editor" class="ui-widget-content ui-corner-all ui-transp-bkgnd">
+    <div id="notice"><div class="panel-header">{{_('Variable editor')}}</div>
+      <div class="content">{{_('Select a variable in the list to open the definition editor')}}.</div>
+    </div>
+    <form id="var-definition" name="var-definition" method="POST" style="display: none">
+        <div class="panel-header">
+            {{_('Definition of variable')}} : <span class="var_name_display"></span>
+        </div>
+        <div id="status" class="status ui-corner-all" style="display: none"></div>
+        <div class="form-body">
+            <p>
+                <label for="var_type" class="prompt">{{_('Variable type')}}</label>
+                <input id="var_type" name="var_type" class="required"/>
+            </p>
+            <p>
+                <label for="var_unit" class="prompt">{{_('Unit')}}</label>
+                <input id="var_unit" name="var_unit"/>
+            </p>
+            <p>
+                <label for="var_threshold" class="prompt">{{_('Notification threshold')}}</label>
+                <input id="var_threshold" name="var_threshold" class="number" value="0"/>
+            </p>
+            <p>
+                <label for="var_ttl" class="prompt">{{_('Time to live')}}</label>
+                <input id="var_ttl" name="var_ttl" class="positive" value="7200"/>
+            </p>
+        </div>
+        <div class="form-footer buttons">
+            <button id="btn-save" type="submit">{{_('Save')}}</button>
+            <button id="btn-delete" type="button">{{_('Delete')}}</button>
+        </div>
+    </form>
+
+    <div id="msg-cfg_changed" style="display: none">
+        <div class="panel-header">
+            {{_('Configuration changed')}}
+        </div>
+        <div class="content">
+            <p>{{_('The configuration has been changed')}}.</p>
+            <p>{{_('Click on button above to record all the modifications')}}.</p>
+            <div class="buttons">
+                <button id="btn-save_cfg">{{_('Save configuration')}}</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="msg-fatal_error"
+        class="ui-transp-bkgnd cfgeditor-page ui-widget-content ui-corner-all"
+        style="display: none">
+        <h2>{{_('Unexpected error')}}</h2>
+        <div class="status ui-corner-all" id="fatal-error-msg"></div>
+        <div id="fatal-error-additInfos-display">
+            <h3 style="color: default">{{_('Additional information')}}</h3>
+            <div id="additInfos-scroller" _class="ui-widget-content ui-corner-all">
+                <pre id="additInfos-text"></pre>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="dlgConfirmDelete" title="{{_('Confirmation')}}" style="display: none">
+    <p style="margin-top: 2em">
+        <span class="icon-question" style="float: left; margin: 0 7px 20px 0;"></span>
+        {{_('Do you really want to delete the variable')}} <span class="var_name_display"></span> ?
+    </p>
+</div>
+{% end %}

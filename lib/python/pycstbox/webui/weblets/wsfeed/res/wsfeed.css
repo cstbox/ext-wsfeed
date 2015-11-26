@@ -1,0 +1,122 @@
+@CHARSET "UTF-8";
+
+/*
+    Shared settings
+*/
+div.page-content {
+    padding: 5px 20px;
+    border: none;
+}
+
+form p {
+    clear: both;
+}
+
+form p.error {
+    padding-left: 16em;
+    color: red;
+    margin-top: 0;
+}
+
+div.panel-header {
+    margin: 10px;
+    padding-bottom: 3px;
+    border-bottom: solid 1px #2E6E9E;
+    font-size: 130%;
+    font-weight: bold;
+    color:  #2E6E9E;
+}
+
+div.buttons {
+    clear: both;
+    text-align: center;
+    padding-top: 10px;
+    padding-bottom: 10px;
+}
+
+div.right-margin {
+    float: right;
+    width: 15%;
+}
+
+div.sub-fieldset {
+    /*width: 50%;*/
+    float: left;: 
+}
+
+fieldset {
+    border: none;
+}
+
+fieldset.border {
+    border-top: solid 1px #2E6E9E;
+}
+
+fieldset.compact p {
+    margin: 0;
+}
+
+legend {
+    color: #2E6E9E;
+    padding-left: 10px;
+    font-size: 110%;
+}
+
+label span.label-suffix {
+    font-style: italic;
+    padding-left: 5px;
+    color: #999999;
+}
+
+.ui-widget-header h3 {
+    margin: 2px 5px;
+}
+
+button {
+    margin: 0 0.5em;
+}
+
+label.prompt {
+    width: 15em;
+}
+
+input {
+    width: 10em;
+}
+
+div.status {
+    margin: 0 1em;
+}
+
+#var-list-panel, #var-editor {
+    height: 100%;
+    padding: 0 5px;
+}
+
+#var-list-panel {
+    width: 27em;
+    float: left;
+}
+
+#var-list {
+    overflow-y: auto;
+}
+
+#var-editor {
+    width: 44em;
+    float: right;
+}
+
+#dlgConfirmDelete .var_name_display {
+    font-weight: bold;
+}
+
+div.content {
+    margin-left: 30px;
+    margin-right: 30px;
+}
+
+div.content p:first-child {
+    margin-top: 0;
+}
+
