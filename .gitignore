@@ -1,4 +1,4 @@
-cstbox-ext-wsfeed_1.0.0_all
+cstbox-ext-wsfeed_*_all
 *.aux
 *.hst
 *.log
@@ -7,3 +7,10 @@ cstbox-ext-wsfeed_1.0.0_all
 *.synctex.gz
 *.toc
 *.ver
+*.bak
+RELEASE-VERSION
+.fab_tasks~
+_build
+.vagrant
+*.tgz
+*.mo
