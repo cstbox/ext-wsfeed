@@ -4,10 +4,12 @@
 """ Web services API for external data feed.
 """
 
-__author__ = 'Eric Pascual - CSTB (eric.pascual@cstb.fr)'
-
 from pycstbox import log
+from pycstbox import wsfeed
+
 from .handlers import *
+
+__author__ = 'Eric Pascual - CSTB (eric.pascual@cstb.fr)'
 
 
 def _init_(logger=None, settings=None):
@@ -20,17 +22,31 @@ def _init_(logger=None, settings=None):
             the pushed variables
     """
 
+    def log_config_dict(d, label):
+        logger.info(label)
+        if d:
+            for k, v in d.iteritems():
+                logger.info("- %s: %s", k, v)
+        else:
+            logger.info('* empty *')
+
     # inject the (provided or created) logger in handlers default initialize parameters
-    _handlers_initparms['logger'] = logger if logger else log.getLogger('svc.wsfeed')
+    logger = logger or log.getLogger('svc.wsfeed')
+    _handlers_initparms['logger'] = logger
 
     # same for services configuration
-    cfg, var_defs = load_configuration(path=settings.get('config_path', '/etc/cstbox/wsfeed.cfg'))
+    cfg = wsfeed.Configuration(path=settings.get('config_path', None))
+    cfg, var_defs = cfg.load()
+
+    log_config_dict(cfg, 'configuration:')
+    log_config_dict(var_defs, 'definitions:')
+
     update_handlers_initparms(cfg, var_defs)
 
 
 def update_handlers_initparms(cfg, var_defs):
     _handlers_initparms['variables'] = var_defs
-    _handlers_initparms.update(cfg)
+    _handlers_initparms['config'] = cfg
 
 _handlers_initparms = {}
 
